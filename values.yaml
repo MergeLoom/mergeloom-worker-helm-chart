@@ -1,77 +1,157 @@
+# Optional. Override the short chart name used in Kubernetes object labels/names.
+nameOverride: ""
+
+# Optional. Override the full Kubernetes object name. Leave blank for the Helm release name plus chart name.
+fullnameOverride: ""
+
+# Worker container image settings. Defaults to the public MergeLoom worker image.
 image:
+  # Optional. Docker image repository for the MergeLoom worker.
   repository: mergeloom/mergeloom
+  # Optional. Image tag to deploy. `1.0` tracks the supported 1.0 release line.
   tag: "1.0"
+  # Optional. Kubernetes image pull policy. `Always` keeps mutable tags such as `1.0` current.
   pullPolicy: Always
 
+# Worker gateway deployment settings.
 gateway:
+  # Optional. Number of gateway pods. Keep this at 1; executors scale job capacity separately.
   replicaCount: 1
 
+# Worker executor settings.
 executors:
+  # Optional. Number of executor pods that can claim and run jobs.
   replicaCount: 1
 
+# Internal gateway service settings.
 service:
+  # Optional. Service type for the worker gateway. `ClusterIP` is recommended.
   type: ClusterIP
+  # Optional. Internal service port for the worker gateway UI/API.
   port: 8010
 
+# MergeLoom worker registration and runtime controls.
 worker:
+  # Required. MergeLoom control-plane URL supplied by MergeLoom.
   controlPlaneUrl: "https://your-control-plane.example"
+  # Required. Customer workspace slug from the MergeLoom controller.
   tenantSlug: "demo"
+  # Required. Enrollment token generated in the MergeLoom controller.
   enrollmentToken: ""
+  # Optional. Shared token for gateway/executor coordination. Leave blank unless MergeLoom supplies one.
   clusterToken: ""
+  # Optional. Comma-separated allowlist of shell commands the worker may execute during jobs.
   allowedCommands: "git,rg,pytest,python,python3"
+  # Optional. Number of executor repair attempts before a job is marked failed.
   maxRepairAttempts: 2
+  # Optional. Per-command timeout in seconds.
   commandTimeoutSeconds: 300
+  # Optional. Timeout in seconds for control-plane HTTP requests.
   controlPlaneRequestTimeoutSeconds: 60
+  # Optional. Heartbeat interval in seconds while a job is actively running.
   activeJobHeartbeatIntervalSeconds: 15
 
+# Reserved provider configuration defaults.
+# Current chart templates run the gateway in UI-managed mode and executors read provider config from the gateway.
+# These values are not required for normal installs and are kept for forward compatibility.
 providerConfig:
+  # Optional/reserved. Future provider configuration mode.
   mode: "provisioned"
+  # Optional/reserved. Future provenance label for provider settings.
   provenance: "helm"
+  # Optional/reserved. Future SQLite path for provider configuration state.
   dbPath: "/data/worker/provider_config.db"
+  # Optional/reserved. Future local encryption key path for provider secrets.
   secretKeyPath: "/data/worker/provider_secret.key"
 
+# Reserved runtime configuration defaults.
+# Current chart templates run the gateway in UI-managed mode and executors read runtime config from the gateway.
+# These values are not required for normal installs and are kept for forward compatibility.
 runtimeConfig:
+  # Optional/reserved. Future runtime configuration mode.
   mode: "provisioned"
+  # Optional/reserved. Future provenance label for runtime settings.
   provenance: "helm"
+  # Optional/reserved. Future SQLite path for runtime configuration state.
   dbPath: "/data/worker/runtime_config.db"
 
+# Optional AI provider credentials and model defaults.
+# Leave unused providers blank. Secret values are written into a Kubernetes Secret.
 providerEnv:
+  # Optional, sensitive. OpenAI API key for OpenAI-backed execution.
   openaiApiKey: ""
+  # Optional. Default OpenAI model or profile.
   openaiModel: ""
+  # Optional, sensitive. Anthropic API key for Anthropic-backed execution.
   anthropicApiKey: ""
+  # Optional. Default Anthropic model or profile.
   anthropicModel: ""
+  # Optional. Default Claude Code model.
   claudeCodeModel: ""
+  # Optional. Vertex AI endpoint URL.
   vertexEndpointUrl: ""
+  # Optional, sensitive. Vertex AI access token.
   vertexAccessToken: ""
+  # Optional. Default Vertex AI model.
   vertexModel: ""
+  # Optional. AWS Bedrock region.
   bedrockRegion: ""
+  # Optional. AWS Bedrock model ID.
   bedrockModelId: ""
+  # Optional, sensitive. AWS access key ID for Bedrock.
   awsAccessKeyId: ""
+  # Optional, sensitive. AWS secret access key for Bedrock.
   awsSecretAccessKey: ""
+  # Optional, sensitive. AWS session token for temporary credentials.
   awsSessionToken: ""
+  # Optional. Azure AI Foundry endpoint URL.
   azureFoundryEndpoint: ""
+  # Optional, sensitive. Azure AI Foundry API key.
   azureFoundryApiKey: ""
+  # Optional. Azure AI Foundry model/deployment name.
   azureFoundryModel: ""
 
+# Persistent volume settings.
 persistence:
+  # Gateway state volume. Stores worker UI state, provider config, runtime config, and local state.
   gateway:
+    # Optional. Enable persistent storage for gateway state. Recommended for production.
     enabled: true
+    # Optional. Kubernetes PVC access mode when gateway persistence is enabled.
     accessMode: ReadWriteOnce
+    # Optional. Requested gateway PVC storage size.
     size: 5Gi
+    # Optional. StorageClass name. Leave blank to use the cluster default.
     storageClassName: ""
+  # Executor workspace volume. Stores cloned repositories and job workspaces.
   workspaces:
+    # Optional. Enable persistent storage for job workspaces. Recommended for production.
     enabled: true
+    # Optional. Kubernetes PVC access mode when workspace persistence is enabled.
     accessMode: ReadWriteOnce
+    # Optional. Requested storage size per executor replica.
     size: 10Gi
+    # Optional. StorageClass name. Leave blank to use the cluster default.
     storageClassName: ""
+  # Shared CLI auth/config volume. Stores Codex/Claude CLI auth state when used.
   cliConfig:
+    # Optional. Enable persistent storage for CLI authentication/configuration. Recommended when using CLI auth.
     enabled: true
+    # Optional. Kubernetes PVC access mode when CLI config persistence is enabled.
     accessMode: ReadWriteOnce
+    # Optional. Requested CLI config PVC storage size.
     size: 1Gi
+    # Optional. StorageClass name. Leave blank to use the cluster default.
     storageClassName: ""
 
+# Optional. Kubernetes resource requests/limits applied to both gateway and executor containers.
 resources: {}
 
+# Optional. Node selector applied to gateway and executor pods.
 nodeSelector: {}
+
+# Optional. Tolerations applied to gateway and executor pods.
 tolerations: []
+
+# Optional. Affinity rules applied to gateway and executor pods.
 affinity: {}
