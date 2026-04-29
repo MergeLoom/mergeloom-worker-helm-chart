@@ -1,0 +1,77 @@
+image:
+  repository: mergeloom/mergeloom
+  tag: "1.0"
+  pullPolicy: Always
+
+gateway:
+  replicaCount: 1
+
+executors:
+  replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8010
+
+worker:
+  controlPlaneUrl: "https://your-control-plane.example"
+  tenantSlug: "demo"
+  enrollmentToken: ""
+  clusterToken: ""
+  allowedCommands: "git,rg,pytest,python,python3"
+  maxRepairAttempts: 2
+  commandTimeoutSeconds: 300
+  controlPlaneRequestTimeoutSeconds: 60
+  activeJobHeartbeatIntervalSeconds: 15
+
+providerConfig:
+  mode: "provisioned"
+  provenance: "helm"
+  dbPath: "/data/worker/provider_config.db"
+  secretKeyPath: "/data/worker/provider_secret.key"
+
+runtimeConfig:
+  mode: "provisioned"
+  provenance: "helm"
+  dbPath: "/data/worker/runtime_config.db"
+
+providerEnv:
+  openaiApiKey: ""
+  openaiModel: ""
+  anthropicApiKey: ""
+  anthropicModel: ""
+  claudeCodeModel: ""
+  vertexEndpointUrl: ""
+  vertexAccessToken: ""
+  vertexModel: ""
+  bedrockRegion: ""
+  bedrockModelId: ""
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+  awsSessionToken: ""
+  azureFoundryEndpoint: ""
+  azureFoundryApiKey: ""
+  azureFoundryModel: ""
+
+persistence:
+  gateway:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    storageClassName: ""
+  workspaces:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    storageClassName: ""
+  cliConfig:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClassName: ""
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

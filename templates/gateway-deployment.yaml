@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jca-worker.gatewayName" . }}
+  labels:
+    {{- include "jca-worker.labels" . | nindent 4 }}
+    component: gateway
+spec:
+  replicas: {{ .Values.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        component: gateway
+    spec:
+      containers:
+        - name: worker-gateway
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8010
+              protocol: TCP
+          env:
+            - name: JCA_WORKER_ROLE
+              value: "gateway"
+            - name: JCA_WORKER_POLL_ENABLED
+              value: "false"
+            - name: JCA_WORKER_CONTROL_PLANE_URL
+              value: {{ .Values.worker.controlPlaneUrl | quote }}
+            - name: JCA_WORKER_TENANT_SLUG
+              value: {{ .Values.worker.tenantSlug | quote }}
+            - name: JCA_WORKER_NAME
+              value: {{ include "jca-worker.gatewayName" . | quote }}
+            - name: JCA_WORKER_LOCAL_STATE_DB
+              value: "/data/gateway/worker_gateway.db"
+            - name: JCA_WORKER_WORKSPACE_ROOT
+              value: "/data/workspaces"
+            - name: JCA_WORKER_CLI_CONFIG_DIR
+              value: "/home/agent/.codex"
+            - name: JCA_PROVIDER_CONFIG_MODE
+              value: "ui"
+            - name: JCA_PROVIDER_CONFIG_DB_PATH
+              value: "/data/gateway/provider_config.db"
+            - name: JCA_PROVIDER_SECRET_KEY_PATH
+              value: "/data/gateway/provider_secret.key"
+            - name: JCA_WORKER_RUNTIME_CONFIG_MODE
+              value: "ui"
+            - name: JCA_WORKER_RUNTIME_CONFIG_DB_PATH
+              value: "/data/gateway/runtime_config.db"
+            - name: JCA_WORKER_ALLOWED_COMMANDS
+              value: {{ .Values.worker.allowedCommands | quote }}
+            - name: JCA_WORKER_COMMAND_TIMEOUT_SECONDS
+              value: {{ .Values.worker.commandTimeoutSeconds | quote }}
+            - name: JCA_WORKER_CONTROL_PLANE_REQUEST_TIMEOUT_SECONDS
+              value: {{ .Values.worker.controlPlaneRequestTimeoutSeconds | quote }}
+            - name: JCA_OPENAI_MODEL
+              value: {{ .Values.providerEnv.openaiModel | quote }}
+            - name: JCA_ANTHROPIC_MODEL
+              value: {{ .Values.providerEnv.anthropicModel | quote }}
+            - name: JCA_WORKER_CLAUDE_CODE_MODEL
+              value: {{ .Values.providerEnv.claudeCodeModel | quote }}
+            - name: JCA_VERTEX_ENDPOINT_URL
+              value: {{ .Values.providerEnv.vertexEndpointUrl | quote }}
+            - name: JCA_VERTEX_MODEL
+              value: {{ .Values.providerEnv.vertexModel | quote }}
+            - name: JCA_BEDROCK_REGION
+              value: {{ .Values.providerEnv.bedrockRegion | quote }}
+            - name: JCA_BEDROCK_MODEL_ID
+              value: {{ .Values.providerEnv.bedrockModelId | quote }}
+            - name: JCA_AZURE_FOUNDRY_ENDPOINT
+              value: {{ .Values.providerEnv.azureFoundryEndpoint | quote }}
+            - name: JCA_AZURE_FOUNDRY_MODEL
+              value: {{ .Values.providerEnv.azureFoundryModel | quote }}
+            - name: JCA_WORKER_HOST
+              value: "0.0.0.0"
+            - name: JCA_WORKER_PORT
+              value: "8010"
+          envFrom:
+            - secretRef:
+                name: {{ include "jca-worker.fullname" . }}-env
+          volumeMounts:
+            - name: worker-gateway-data
+              mountPath: /data
+            - name: cli-config
+              mountPath: /home/agent/.codex
+              subPath: codex
+            - name: cli-config
+              mountPath: /home/agent/.claude
+              subPath: claude
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.gateway.enabled }}
+        - name: worker-gateway-data
+          persistentVolumeClaim:
+            claimName: {{ include "jca-worker.gatewayName" . }}-data
+        {{- else }}
+        - name: worker-gateway-data
+          emptyDir: {}
+        {{- end }}
+        - name: cli-config
+          {{- if .Values.persistence.cliConfig.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "jca-worker.fullname" . }}-cli-config
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}

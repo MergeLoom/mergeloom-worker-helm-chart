@@ -1,0 +1,19 @@
+1. The worker gateway UI is only exposed inside the cluster by default.
+
+   Port-forward the gateway service locally:
+   kubectl port-forward svc/{{ include "jca-worker.fullname" . }} 8010:{{ .Values.service.port }}
+
+2. Scale executors with:
+   helm upgrade --install {{ .Release.Name }} . --set executors.replicaCount=3
+
+3. If you are using Codex CLI authentication, authenticate through the gateway:
+   kubectl exec -it deploy/{{ include "jca-worker.gatewayName" . }} -- codex login
+
+4. If you are using Claude Code CLI authentication, authenticate through the gateway:
+   kubectl exec -it deploy/{{ include "jca-worker.gatewayName" . }} -- claude auth login
+
+5. The gateway and executors mount the same persistence.cliConfig PVC for CLI auth state.
+   Use a storage access mode that matches your node layout when scaling across nodes.
+
+6. Open the worker UI locally:
+   http://127.0.0.1:8010/

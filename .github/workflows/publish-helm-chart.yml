@@ -1,0 +1,94 @@
+name: Publish Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Chart version to publish, for example 1.0.0"
+        required: true
+        default: "1.0.0"
+        type: string
+      app_version:
+        description: "Worker app/image version, for example 1.0"
+        required: false
+        default: "1.0"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-helm-chart-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  OCI_REGISTRY: registry-1.docker.io
+  OCI_NAMESPACE: mergeloom
+  CHART_NAME: mergeloom-worker
+
+jobs:
+  publish:
+    name: Package and publish Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Resolve chart version
+        id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version || '' }}
+          INPUT_APP_VERSION: ${{ github.event.inputs.app_version || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${INPUT_VERSION#v}"
+          fi
+          app_version="${INPUT_APP_VERSION:-$version}"
+          if [[ -z "$app_version" ]]; then
+            app_version="$version"
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Chart version '$version' must be semver like 1.0.0."
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "app_version=$app_version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Lint chart
+        run: helm lint .
+
+      - name: Log in to Docker Hub
+        run: |
+          echo "${DOCKERHUB_TOKEN}" | helm registry login "${OCI_REGISTRY}" \
+            --username "${DOCKERHUB_USERNAME}" \
+            --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Package chart
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mergeloom-helm
+          helm package . \
+            --version "${{ steps.version.outputs.version }}" \
+            --app-version "${{ steps.version.outputs.app_version }}" \
+            --destination /tmp/mergeloom-helm
+
+      - name: Push chart
+        run: |
+          helm push "/tmp/mergeloom-helm/${CHART_NAME}-${{ steps.version.outputs.version }}.tgz" \
+            "oci://${OCI_REGISTRY}/${OCI_NAMESPACE}"

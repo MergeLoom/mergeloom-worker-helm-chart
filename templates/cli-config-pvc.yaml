@@ -1,0 +1,18 @@
+{{- if .Values.persistence.cliConfig.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "jca-worker.fullname" . }}-cli-config
+  labels:
+    {{- include "jca-worker.labels" . | nindent 4 }}
+    component: cli-config
+spec:
+  accessModes:
+    - {{ .Values.persistence.cliConfig.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.cliConfig.size }}
+  {{- if .Values.persistence.cliConfig.storageClassName }}
+  storageClassName: {{ .Values.persistence.cliConfig.storageClassName }}
+  {{- end }}
+{{- end }}
