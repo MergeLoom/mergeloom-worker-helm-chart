@@ -55,19 +55,4 @@ Important values:
 - [Install a MergeLoom worker](https://mergeloom.ai/docs/getting-started/install-worker/)
 - Worker image: `mergeloom/mergeloom:1.0`
 
-## Publish
 
-The GitHub Actions workflow packages the chart and pushes it to Docker Hub as an OCI artifact.
-
-Required GitHub secrets:
-
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-
-Manual publish from a machine with Docker Hub auth:
-
-```bash
-helm registry login registry-1.docker.io
-helm package . --version 1.0.0 --app-version 1.0.0 --destination /tmp/mergeloom-helm
-helm push /tmp/mergeloom-helm/mergeloom-worker-1.0.0.tgz oci://registry-1.docker.io/mergeloom
-```
