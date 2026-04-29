@@ -10,8 +10,8 @@ on:
     inputs:
       version:
         description: "Chart version to publish, for example 1.0.0"
-        required: true
-        default: "1.0.0"
+        required: false
+        default: "1.0.1"
         type: string
       app_version:
         description: "Worker app/image version, for example 1.0"
@@ -51,10 +51,13 @@ jobs:
           set -euo pipefail
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             version="${GITHUB_REF_NAME#v}"
-          else
+          elif [[ -n "${INPUT_VERSION}" ]]; then
             version="${INPUT_VERSION#v}"
+          else
+            version="$(awk -F': *' '$1 == "version" { gsub(/"/, "", $2); print $2; exit }' Chart.yaml)"
           fi
-          app_version="${INPUT_APP_VERSION:-$version}"
+          chart_app_version="$(awk -F': *' '$1 == "appVersion" { gsub(/"/, "", $2); print $2; exit }' Chart.yaml)"
+          app_version="${INPUT_APP_VERSION:-$chart_app_version}"
           if [[ -z "$app_version" ]]; then
             app_version="$version"
           fi

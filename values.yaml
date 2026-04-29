@@ -36,9 +36,9 @@ worker:
   controlPlaneUrl: "https://your-control-plane.example"
   # Required. Customer workspace slug from the MergeLoom controller.
   tenantSlug: "demo"
-  # Required. Enrollment token generated in the MergeLoom controller.
+  # Required unless supplied by secret.existingSecretName. Enrollment token generated in the MergeLoom controller.
   enrollmentToken: ""
-  # Optional. Shared token for gateway/executor coordination. Leave blank unless MergeLoom supplies one.
+  # Optional. Shared token for gateway/executor coordination. Prefer secret.existingSecretName for production.
   clusterToken: ""
   # Optional. Comma-separated allowlist of shell commands the worker may execute during jobs.
   allowedCommands: "git,rg,pytest,python,python3"
@@ -75,8 +75,19 @@ runtimeConfig:
   # Optional/reserved. Future SQLite path for runtime configuration state.
   dbPath: "/data/worker/runtime_config.db"
 
+# Sensitive environment secret settings.
+secret:
+  # Optional. Name of an existing Kubernetes Secret to consume with envFrom.
+  # Recommended for production so sensitive values do not live in values.yaml or Helm release metadata.
+  # When set, this chart will not create its own Secret. The Secret should contain these keys as needed:
+  # JCA_WORKER_ENROLLMENT_TOKEN, JCA_WORKER_CLUSTER_TOKEN, JCA_OPENAI_API_KEY,
+  # JCA_ANTHROPIC_API_KEY, JCA_VERTEX_ACCESS_TOKEN, AWS_ACCESS_KEY_ID,
+  # AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, JCA_AZURE_FOUNDRY_API_KEY.
+  existingSecretName: ""
+
 # Optional AI provider credentials and model defaults.
-# Leave unused providers blank. Secret values are written into a Kubernetes Secret.
+# Leave unused providers blank. Sensitive values here are a quick-start fallback only.
+# For production, prefer secret.existingSecretName with a Secret managed by your cluster secret workflow.
 providerEnv:
   # Optional, sensitive. OpenAI API key for OpenAI-backed execution.
   openaiApiKey: ""

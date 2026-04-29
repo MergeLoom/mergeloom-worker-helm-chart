@@ -85,7 +85,7 @@ spec:
               value: {{ .Values.providerEnv.azureFoundryModel | quote }}
           envFrom:
             - secretRef:
-                name: {{ include "jca-worker.fullname" . }}-env
+                name: {{ include "jca-worker.envSecretName" . }}
           volumeMounts:
             - name: worker-data
               mountPath: /data

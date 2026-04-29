@@ -10,6 +10,14 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "jca-worker.envSecretName" -}}
+{{- if .Values.secret.existingSecretName -}}
+{{- .Values.secret.existingSecretName -}}
+{{- else -}}
+{{- printf "%s-env" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "jca-worker.labels" -}}
 app.kubernetes.io/name: {{ include "jca-worker.name" . }}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}

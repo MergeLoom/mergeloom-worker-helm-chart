@@ -84,7 +84,7 @@ spec:
               value: "8010"
           envFrom:
             - secretRef:
-                name: {{ include "jca-worker.fullname" . }}-env
+                name: {{ include "jca-worker.envSecretName" . }}
           volumeMounts:
             - name: worker-gateway-data
               mountPath: /data
