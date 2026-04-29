@@ -2,7 +2,9 @@
 
 Official Helm chart for installing the customer-side [MergeLoom](https://mergeloom.ai) worker on Kubernetes.
 
-MergeLoom is an AI software engineering automation platform for Jira, GitHub, GitLab, Azure DevOps, pull requests, merge requests, code review workflows, and self-hosted worker execution. This chart deploys the worker gateway and executor components that connect your Kubernetes cluster to the MergeLoom control plane.
+MergeLoom gives engineering teams lower-cost, always-on agentic coding without losing control of how work is executed. It standardises prompts, models, validation commands, repository access, and pull request workflows across Jira, GitHub, GitLab, and Azure DevOps. Every worker run is auditable, repeatable, and connected back to the issue and PR/MR that triggered it.
+
+This chart deploys the self-hosted worker gateway and executor components that connect your Kubernetes cluster to the MergeLoom control plane, so teams can run 24/7 coding automation inside their own infrastructure.
 
 For the full customer installation guide, see [Install a MergeLoom worker](https://mergeloom.ai/docs/getting-started/install-worker/).
 
