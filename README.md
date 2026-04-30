@@ -20,8 +20,8 @@ Set the customer-specific values from the controller before installing:
 
 ```bash
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.1 \
-  --set worker.controlPlaneUrl="https://controller.example.com" \
+  --version 1.0.2 \
+  --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set worker.enrollmentToken="worker-enrollment-token"
 ```
@@ -36,8 +36,8 @@ kubectl create secret generic mergeloom-worker-env \
   --from-literal=JCA_OPENAI_API_KEY="openai-api-key"
 
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.1 \
-  --set worker.controlPlaneUrl="https://controller.example.com" \
+  --version 1.0.2 \
+  --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set secret.existingSecretName="mergeloom-worker-env"
 ```
@@ -59,7 +59,7 @@ For local testing from this repository:
 ```bash
 helm lint .
 helm template mergeloom-worker . \
-  --set worker.controlPlaneUrl="https://controller.example.com" \
+  --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set worker.enrollmentToken="worker-enrollment-token"
 ```
@@ -70,7 +70,7 @@ Important values:
 
 - `image.repository`: worker image repository. Default: `mergeloom/mergeloom`
 - `image.tag`: worker image tag. Default: `1.0`
-- `worker.controlPlaneUrl`: controller URL supplied by MergeLoom.
+- `worker.controlPlaneUrl`: MergeLoom controller URL. Default: `https://controller.mergeloom.ai`.
 - `worker.tenantSlug`: customer workspace slug.
 - `worker.enrollmentToken`: worker enrollment token from the controller. For production, prefer `secret.existingSecretName`.
 - `secret.existingSecretName`: existing Kubernetes Secret consumed by the worker pods for sensitive env vars.
@@ -83,4 +83,3 @@ Important values:
 - [MergeLoom website](https://mergeloom.ai)
 - [Install a MergeLoom worker](https://mergeloom.ai/docs/getting-started/install-worker/)
 - Worker image: `mergeloom/mergeloom:1.0`
-

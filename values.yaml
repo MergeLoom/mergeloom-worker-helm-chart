@@ -32,8 +32,8 @@ service:
 
 # MergeLoom worker registration and runtime controls.
 worker:
-  # Required. MergeLoom control-plane URL supplied by MergeLoom.
-  controlPlaneUrl: "https://your-control-plane.example"
+  # Required. MergeLoom controller URL. Override only if MergeLoom support gives you a different URL.
+  controlPlaneUrl: "https://controller.mergeloom.ai"
   # Required. Customer workspace slug from the MergeLoom controller.
   tenantSlug: "demo"
   # Required unless supplied by secret.existingSecretName. Enrollment token generated in the MergeLoom controller.
