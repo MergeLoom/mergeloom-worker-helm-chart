@@ -30,6 +30,31 @@ service:
   # Optional. Internal service port for the worker gateway UI/API.
   port: 8010
 
+# Kubernetes service account settings for cloud workload identity.
+# Required only when your cluster uses GKE Workload Identity Federation, EKS IRSA,
+# AKS Workload Identity, or another pod-identity integration.
+serviceAccount:
+  # Optional. Create a service account for the gateway and executor pods.
+  create: false
+  # Optional. Existing service account name to use, or the created service account name.
+  name: ""
+  # Optional. Service account annotations for your cloud identity integration.
+  # Examples:
+  # iam.gke.io/gcp-service-account: worker-sa@project.iam.gserviceaccount.com
+  # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/mergeloom-worker
+  # azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000
+  annotations: {}
+  # Optional. Keep enabled for cloud workload identity token projection.
+  automountServiceAccountToken: true
+
+# Optional. Extra labels added to gateway and executor pod templates.
+# AKS Workload Identity usually requires:
+# azure.workload.identity/use: "true"
+podLabels: {}
+
+# Optional. Extra annotations added to gateway and executor pod templates.
+podAnnotations: {}
+
 # MergeLoom worker registration and runtime controls.
 worker:
   # Required. MergeLoom controller URL. Override only if MergeLoom support gives you a different URL.
@@ -81,8 +106,9 @@ secret:
   # Recommended for production so sensitive values do not live in values.yaml or Helm release metadata.
   # When set, this chart will not create its own Secret. The Secret should contain these keys as needed:
   # JCA_WORKER_ENROLLMENT_TOKEN, JCA_WORKER_CLUSTER_TOKEN, JCA_OPENAI_API_KEY,
-  # JCA_ANTHROPIC_API_KEY, JCA_VERTEX_ACCESS_TOKEN, AWS_ACCESS_KEY_ID,
-  # AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, JCA_AZURE_FOUNDRY_API_KEY.
+  # JCA_ANTHROPIC_API_KEY, JCA_VERTEX_SERVICE_ACCOUNT_JSON, JCA_VERTEX_ACCESS_TOKEN,
+  # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN,
+  # JCA_AZURE_FOUNDRY_API_KEY, AZURE_CLIENT_SECRET, JCA_AZURE_FOUNDRY_BEARER_TOKEN.
   existingSecretName: ""
 
 # Optional AI provider credentials and model defaults.
@@ -99,26 +125,59 @@ providerEnv:
   anthropicModel: ""
   # Optional. Default Claude Code model.
   claudeCodeModel: ""
-  # Optional. Vertex AI endpoint URL.
+  # Optional. Vertex AI auth method: service_account_json, adc, or access_token.
+  vertexAuthMethod: ""
+  # Optional. Vertex AI endpoint mode: structured or raw-endpoint.
+  vertexEndpointMode: ""
+  # Optional. Vertex AI raw endpoint URL. Used only when vertexEndpointMode is raw-endpoint.
   vertexEndpointUrl: ""
-  # Optional, sensitive. Vertex AI access token.
-  vertexAccessToken: ""
-  # Optional. Default Vertex AI model.
+  # Optional. Vertex AI project ID for structured publisher model paths.
+  vertexProjectId: ""
+  # Optional. Vertex AI location for structured publisher model paths.
+  vertexLocation: ""
+  # Optional. Vertex AI publisher for structured publisher model paths. Defaults to google in the worker.
+  vertexPublisher: ""
+  # Optional. Default Vertex AI model for structured publisher model paths.
   vertexModel: ""
+  # Optional. ADC credential file path. Leave blank for GKE Workload Identity or metadata credentials.
+  vertexCredentialsPath: ""
+  # Optional, sensitive. Vertex AI service account JSON. Prefer secret.existingSecretName for production.
+  vertexServiceAccountJson: ""
+  # Optional, sensitive. Vertex AI access token. Advanced/testing only because tokens expire.
+  vertexAccessToken: ""
+  # Optional. AWS Bedrock auth method: default_chain, static_keys, or profile.
+  bedrockAuthMethod: ""
   # Optional. AWS Bedrock region.
   bedrockRegion: ""
   # Optional. AWS Bedrock model ID.
   bedrockModelId: ""
+  # Optional. Bedrock endpoint override for local sandboxes such as LocalStack.
+  bedrockEndpointUrl: ""
   # Optional, sensitive. AWS access key ID for Bedrock.
   awsAccessKeyId: ""
   # Optional, sensitive. AWS secret access key for Bedrock.
   awsSecretAccessKey: ""
   # Optional, sensitive. AWS session token for temporary credentials.
   awsSessionToken: ""
+  # Optional. AWS profile from mounted ~/.aws/config or ~/.aws/credentials.
+  awsProfile: ""
+  # Optional. Azure AI Foundry auth method: api_key, client_secret, managed_identity,
+  # workload_identity, or bearer_token.
+  azureFoundryAuthMethod: ""
   # Optional. Azure AI Foundry endpoint URL.
   azureFoundryEndpoint: ""
   # Optional, sensitive. Azure AI Foundry API key.
   azureFoundryApiKey: ""
+  # Optional. Azure tenant ID for Entra service principal or workload identity auth.
+  azureFoundryTenantId: ""
+  # Optional. Azure client ID for service principal, managed identity, or workload identity auth.
+  azureFoundryClientId: ""
+  # Optional, sensitive. Azure client secret for Entra service-principal auth.
+  azureFoundryClientSecret: ""
+  # Optional. Azure federated token file path. Usually injected by AKS Workload Identity.
+  azureFoundryFederatedTokenFile: ""
+  # Optional, sensitive. Azure bearer token. Advanced/testing only because tokens expire.
+  azureFoundryBearerToken: ""
   # Optional. Azure AI Foundry model/deployment name.
   azureFoundryModel: ""
 

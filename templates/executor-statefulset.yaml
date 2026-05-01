@@ -19,7 +19,18 @@ spec:
         app.kubernetes.io/name: {{ include "jca-worker.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         component: executor
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+      serviceAccountName: {{ include "jca-worker.serviceAccountName" . }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       containers:
         - name: worker-executor
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -71,16 +82,42 @@ spec:
               value: {{ .Values.providerEnv.anthropicModel | quote }}
             - name: JCA_WORKER_CLAUDE_CODE_MODEL
               value: {{ .Values.providerEnv.claudeCodeModel | quote }}
+            - name: JCA_VERTEX_AUTH_METHOD
+              value: {{ .Values.providerEnv.vertexAuthMethod | quote }}
+            - name: JCA_VERTEX_ENDPOINT_MODE
+              value: {{ .Values.providerEnv.vertexEndpointMode | quote }}
             - name: JCA_VERTEX_ENDPOINT_URL
               value: {{ .Values.providerEnv.vertexEndpointUrl | quote }}
+            - name: JCA_VERTEX_PROJECT_ID
+              value: {{ .Values.providerEnv.vertexProjectId | quote }}
+            - name: JCA_VERTEX_LOCATION
+              value: {{ .Values.providerEnv.vertexLocation | quote }}
+            - name: JCA_VERTEX_PUBLISHER
+              value: {{ .Values.providerEnv.vertexPublisher | quote }}
             - name: JCA_VERTEX_MODEL
               value: {{ .Values.providerEnv.vertexModel | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ .Values.providerEnv.vertexCredentialsPath | quote }}
+            - name: JCA_BEDROCK_AUTH_METHOD
+              value: {{ .Values.providerEnv.bedrockAuthMethod | quote }}
             - name: JCA_BEDROCK_REGION
               value: {{ .Values.providerEnv.bedrockRegion | quote }}
             - name: JCA_BEDROCK_MODEL_ID
               value: {{ .Values.providerEnv.bedrockModelId | quote }}
+            - name: JCA_BEDROCK_ENDPOINT_URL
+              value: {{ .Values.providerEnv.bedrockEndpointUrl | quote }}
+            - name: AWS_PROFILE
+              value: {{ .Values.providerEnv.awsProfile | quote }}
+            - name: JCA_AZURE_FOUNDRY_AUTH_METHOD
+              value: {{ .Values.providerEnv.azureFoundryAuthMethod | quote }}
             - name: JCA_AZURE_FOUNDRY_ENDPOINT
               value: {{ .Values.providerEnv.azureFoundryEndpoint | quote }}
+            - name: AZURE_TENANT_ID
+              value: {{ .Values.providerEnv.azureFoundryTenantId | quote }}
+            - name: AZURE_CLIENT_ID
+              value: {{ .Values.providerEnv.azureFoundryClientId | quote }}
+            - name: AZURE_FEDERATED_TOKEN_FILE
+              value: {{ .Values.providerEnv.azureFoundryFederatedTokenFile | quote }}
             - name: JCA_AZURE_FOUNDRY_MODEL
               value: {{ .Values.providerEnv.azureFoundryModel | quote }}
           envFrom:

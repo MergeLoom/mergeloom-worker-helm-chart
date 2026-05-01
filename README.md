@@ -48,11 +48,37 @@ The chart consumes the existing Secret with `envFrom`. Add only the keys your wo
 - `JCA_WORKER_CLUSTER_TOKEN`
 - `JCA_OPENAI_API_KEY`
 - `JCA_ANTHROPIC_API_KEY`
+- `JCA_VERTEX_SERVICE_ACCOUNT_JSON`
 - `JCA_VERTEX_ACCESS_TOKEN`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_SESSION_TOKEN`
 - `JCA_AZURE_FOUNDRY_API_KEY`
+- `AZURE_CLIENT_SECRET`
+- `JCA_AZURE_FOUNDRY_BEARER_TOKEN`
+
+For Kubernetes cloud identity, prefer keyless identity where your platform supports it:
+
+- Vertex AI on GKE: set `providerEnv.vertexAuthMethod=adc`, set the Vertex project/location/model values, and run the pods with the Kubernetes service account your GKE Workload Identity Federation setup allows to call Vertex AI.
+- AWS Bedrock on EKS: set `providerEnv.bedrockAuthMethod=default_chain` and annotate the worker service account for IRSA.
+- Azure Foundry on AKS: set `providerEnv.azureFoundryAuthMethod=workload_identity`, set tenant/client IDs, add the AKS workload identity pod label, and use the injected federated token file.
+
+Example GKE Workload Identity-style install:
+
+```bash
+helm upgrade --install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
+  --version 1.0.2 \
+  --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
+  --set worker.tenantSlug="customer-slug" \
+  --set secret.existingSecretName="mergeloom-worker-env" \
+  --set serviceAccount.create=true \
+  --set-string 'serviceAccount.annotations.iam\.gke\.io/gcp-service-account=worker-sa@project.iam.gserviceaccount.com' \
+  --set providerEnv.vertexAuthMethod="adc" \
+  --set providerEnv.vertexEndpointMode="structured" \
+  --set providerEnv.vertexProjectId="gcp-project-id" \
+  --set providerEnv.vertexLocation="global" \
+  --set providerEnv.vertexModel="gemini-2.5-pro"
+```
 
 For local testing from this repository:
 
@@ -74,6 +100,8 @@ Important values:
 - `worker.tenantSlug`: customer workspace slug.
 - `worker.enrollmentToken`: worker enrollment token from the controller. For production, prefer `secret.existingSecretName`.
 - `secret.existingSecretName`: existing Kubernetes Secret consumed by the worker pods for sensitive env vars.
+- `serviceAccount.*`: Kubernetes service account creation, name, and cloud identity annotations.
+- `podLabels` / `podAnnotations`: extra pod metadata for identity integrations such as AKS Workload Identity.
 - `gateway.replicaCount`: gateway replica count. Keep at `1`.
 - `executors.replicaCount`: executor count.
 - `persistence.*`: PVC settings for worker state, workspaces, and CLI auth config.

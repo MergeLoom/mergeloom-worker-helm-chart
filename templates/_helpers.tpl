@@ -18,6 +18,14 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "jca-worker.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- default (include "jca-worker.fullname" .) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "jca-worker.labels" -}}
 app.kubernetes.io/name: {{ include "jca-worker.name" . }}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
