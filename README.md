@@ -20,7 +20,7 @@ Set the customer-specific values from the controller before installing:
 
 ```bash
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.2 \
+  --version 1.0.3 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set worker.enrollmentToken="worker-enrollment-token"
@@ -28,15 +28,18 @@ helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-wor
 
 Open the MergeLoom web app at [mergeloom.ai](https://mergeloom.ai) to create a workspace and generate the worker enrollment token.
 
+When the chart creates its own Secret, it generates `JCA_WORKER_CLUSTER_TOKEN` automatically if `worker.clusterToken` is blank. The token is reused on upgrades and is only used for internal gateway/executor authentication inside the worker install. You do not need to copy it from the controller.
+
 For production installs, manage sensitive values with a Kubernetes Secret instead of putting them in Helm values:
 
 ```bash
 kubectl create secret generic mergeloom-worker-env \
   --from-literal=JCA_WORKER_ENROLLMENT_TOKEN="worker-enrollment-token" \
+  --from-literal=JCA_WORKER_CLUSTER_TOKEN="$(openssl rand -hex 48)" \
   --from-literal=JCA_OPENAI_API_KEY="openai-api-key"
 
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.2 \
+  --version 1.0.3 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set secret.existingSecretName="mergeloom-worker-env"
@@ -67,7 +70,7 @@ Example GKE Workload Identity-style install:
 
 ```bash
 helm upgrade --install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.2 \
+  --version 1.0.3 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set secret.existingSecretName="mergeloom-worker-env" \
@@ -99,6 +102,7 @@ Important values:
 - `worker.controlPlaneUrl`: MergeLoom controller URL. Default: `https://controller.mergeloom.ai`.
 - `worker.tenantSlug`: customer workspace slug.
 - `worker.enrollmentToken`: worker enrollment token from the controller. For production, prefer `secret.existingSecretName`.
+- `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used.
 - `secret.existingSecretName`: existing Kubernetes Secret consumed by the worker pods for sensitive env vars.
 - `serviceAccount.*`: Kubernetes service account creation, name, and cloud identity annotations.
 - `podLabels` / `podAnnotations`: extra pod metadata for identity integrations such as AKS Workload Identity.

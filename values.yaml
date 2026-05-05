@@ -63,7 +63,7 @@ worker:
   tenantSlug: "demo"
   # Required unless supplied by secret.existingSecretName. Enrollment token generated in the MergeLoom controller.
   enrollmentToken: ""
-  # Optional. Shared token for gateway/executor coordination. Prefer secret.existingSecretName for production.
+  # Optional. Shared token for gateway/executor coordination. If blank, the chart generates one and reuses it on upgrade.
   clusterToken: ""
   # Optional. Comma-separated allowlist of shell commands the worker may execute during jobs.
   allowedCommands: "git,rg,pytest,python,python3"
@@ -104,6 +104,7 @@ runtimeConfig:
 secret:
   # Optional. Name of an existing Kubernetes Secret to consume with envFrom.
   # Recommended for production so sensitive values do not live in values.yaml or Helm release metadata.
+  # If using an existing Secret, include JCA_WORKER_CLUSTER_TOKEN or generate one before install.
   # When set, this chart will not create its own Secret. The Secret should contain these keys as needed:
   # JCA_WORKER_ENROLLMENT_TOKEN, JCA_WORKER_CLUSTER_TOKEN, JCA_OPENAI_API_KEY,
   # JCA_ANTHROPIC_API_KEY, JCA_VERTEX_SERVICE_ACCOUNT_JSON, JCA_VERTEX_ACCESS_TOKEN,

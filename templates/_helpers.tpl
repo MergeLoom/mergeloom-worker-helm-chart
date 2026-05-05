@@ -18,6 +18,21 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "jca-worker.clusterToken" -}}
+{{- $configured := .Values.worker.clusterToken | default "" -}}
+{{- if $configured -}}
+{{- $configured -}}
+{{- else -}}
+{{- $secretName := include "jca-worker.envSecretName" . -}}
+{{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName -}}
+{{- if and $existingSecret $existingSecret.data (index $existingSecret.data "JCA_WORKER_CLUSTER_TOKEN") -}}
+{{- index $existingSecret.data "JCA_WORKER_CLUSTER_TOKEN" | b64dec -}}
+{{- else -}}
+{{- randAlphaNum 64 -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "jca-worker.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
 {{- default (include "jca-worker.fullname" .) .Values.serviceAccount.name | trunc 63 | trimSuffix "-" -}}
