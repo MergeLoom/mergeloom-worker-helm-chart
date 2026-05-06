@@ -95,20 +95,71 @@ helm template mergeloom-worker . \
 
 ## Values
 
-Important values:
+### Core Configuration
 
 - `image.repository`: worker image repository. Default: `mergeloom/mergeloom`
 - `image.tag`: worker image tag. Default: `1.0`
-- `worker.controlPlaneUrl`: MergeLoom controller URL. Default: `https://controller.mergeloom.ai`.
-- `worker.tenantSlug`: customer workspace slug.
-- `worker.enrollmentToken`: worker enrollment token from the controller. For production, prefer `secret.existingSecretName`.
-- `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used.
-- `secret.existingSecretName`: existing Kubernetes Secret consumed by the worker pods for sensitive env vars.
-- `serviceAccount.*`: Kubernetes service account creation, name, and cloud identity annotations.
-- `podLabels` / `podAnnotations`: extra pod metadata for identity integrations such as AKS Workload Identity.
-- `gateway.replicaCount`: gateway replica count. Keep at `1`.
-- `executors.replicaCount`: executor count.
-- `persistence.*`: PVC settings for worker state, workspaces, and CLI auth config.
+- `image.pullPolicy`: Kubernetes image pull policy. Default: `Always`
+- `worker.controlPlaneUrl`: MergeLoom controller URL. Default: `https://controller.mergeloom.ai`
+- `worker.tenantSlug`: customer workspace slug (required)
+- `worker.enrollmentToken`: worker enrollment token from the MergeLoom controller (required unless `secret.existingSecretName` is set)
+- `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used
+
+### Worker Runtime Controls
+
+- `worker.allowedCommands`: comma-separated allowlist of shell commands the worker may execute. Default: `git,rg,pytest,python,python3`
+- `worker.maxRepairAttempts`: number of executor repair attempts before a job is marked failed. Default: `2`
+- `worker.commandTimeoutSeconds`: per-command timeout in seconds. Default: `300`
+- `worker.controlPlaneRequestTimeoutSeconds`: timeout in seconds for control-plane HTTP requests. Default: `60`
+- `worker.activeJobHeartbeatIntervalSeconds`: heartbeat interval in seconds while a job is actively running. Default: `15`
+
+### Deployment Configuration
+
+- `gateway.replicaCount`: gateway replica count. Keep at `1`
+- `executors.replicaCount`: executor pod count for job claim and execution. Scales job capacity
+- `service.type`: internal gateway service type. Default: `ClusterIP` (recommended)
+- `service.port`: internal gateway service port. Default: `8010`
+
+### Cloud Identity and Service Accounts
+
+- `serviceAccount.create`: create a service account for gateway and executor pods. Default: `false`
+- `serviceAccount.name`: existing service account name or the created service account name
+- `serviceAccount.annotations`: service account annotations for cloud identity integrations (GKE Workload Identity, EKS IRSA, AKS Workload Identity, etc.)
+- `serviceAccount.automountServiceAccountToken`: enable pod service account token projection. Default: `true`
+- `podLabels`: extra labels on gateway and executor pod templates. AKS Workload Identity requires `azure.workload.identity/use: "true"`
+- `podAnnotations`: extra annotations on gateway and executor pod templates
+
+### Secrets Management
+
+- `secret.existingSecretName`: name of existing Kubernetes Secret to consume with `envFrom`. Recommended for production to avoid storing sensitive values in `values.yaml`
+- `providerEnv.*`: AI provider credentials and model defaults. For production, prefer `secret.existingSecretName`
+
+### Persistence
+
+- `persistence.gateway.enabled`: enable persistent storage for gateway state (worker UI state, provider config, runtime config). Default: `true`. Recommended for production
+- `persistence.gateway.accessMode`: PVC access mode. Default: `ReadWriteOnce`
+- `persistence.gateway.size`: requested gateway PVC storage. Default: `5Gi`
+- `persistence.gateway.storageClassName`: StorageClass name. Leave blank for cluster default
+- `persistence.workspaces.enabled`: enable persistent storage for job workspaces (cloned repositories). Default: `true`. Recommended for production
+- `persistence.workspaces.accessMode`: PVC access mode. Default: `ReadWriteOnce`
+- `persistence.workspaces.size`: requested storage per executor replica. Default: `10Gi`
+- `persistence.workspaces.storageClassName`: StorageClass name. Leave blank for cluster default
+- `persistence.cliConfig.enabled`: enable persistent storage for CLI auth/config state. Default: `true`. Recommended when using CLI auth
+- `persistence.cliConfig.accessMode`: PVC access mode. Default: `ReadWriteOnce`
+- `persistence.cliConfig.size`: requested CLI config PVC storage. Default: `1Gi`
+- `persistence.cliConfig.storageClassName`: StorageClass name. Leave blank for cluster default
+
+### Pod Resource and Scheduling
+
+- `resources`: optional Kubernetes resource requests/limits applied to gateway and executor containers. Default: `{}`
+- `nodeSelector`: optional node selector applied to gateway and executor pods. Default: `{}`
+- `tolerations`: optional tolerations applied to gateway and executor pods. Default: `[]`
+- `affinity`: optional affinity rules applied to gateway and executor pods. Default: `{}`
+
+### Miscellaneous
+
+- `nameOverride`: override the short chart name used in Kubernetes object labels/names
+- `fullnameOverride`: override the full Kubernetes object name
 
 ## Related Links
 
