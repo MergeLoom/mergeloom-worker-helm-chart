@@ -14,6 +14,20 @@ The worker image is published separately on Docker Hub:
 docker pull mergeloom/mergeloom:1.0
 ```
 
+## Architecture
+
+The chart deploys two workloads from the same container image:
+
+| Component | Kind | Description |
+|---|---|---|
+| `<release>-<chart>-gateway` | `Deployment` | Single pod. Serves the worker UI and API on port 8010, manages provider and runtime configuration, and coordinates job assignment to executors. |
+| `<release>-<chart>-executor` | `StatefulSet` | One or more pods. Each executor claims and runs jobs. Scale this for higher job throughput. |
+
+Two Kubernetes Services are created:
+
+- `<release>-<chart>` — `ClusterIP` service routing to the gateway pod on the configured port (default `8010`).
+- `<release>-<chart>-headless` — headless service used for stable DNS addressing of individual executor pods.
+
 ## Install
 
 Set the customer-specific values from the controller before installing:
@@ -93,6 +107,45 @@ helm template mergeloom-worker . \
   --set worker.enrollmentToken="worker-enrollment-token"
 ```
 
+## Post-install
+
+### Access the worker UI
+
+The gateway UI is only exposed inside the cluster by default. Port-forward it locally:
+
+```bash
+kubectl port-forward svc/mergeloom-worker-mergeloom-worker 8010:8010
+```
+
+Then open `http://127.0.0.1:8010/` in your browser.
+
+### Scale executors
+
+Increase executor replicas to increase job throughput:
+
+```bash
+helm upgrade mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
+  --version 1.0.3 \
+  --reuse-values \
+  --set executors.replicaCount=3
+```
+
+### CLI authentication
+
+If your jobs use Codex CLI or Claude Code CLI, authenticate through the gateway pod. The gateway and executors share the same `cliConfig` PVC so credentials are available to all executor pods.
+
+Authenticate Codex:
+
+```bash
+kubectl exec -it deploy/mergeloom-worker-mergeloom-worker-gateway -- codex login
+```
+
+Authenticate Claude Code:
+
+```bash
+kubectl exec -it deploy/mergeloom-worker-mergeloom-worker-gateway -- claude auth login
+```
+
 ## Values
 
 ### Core Configuration
@@ -101,9 +154,9 @@ helm template mergeloom-worker . \
 - `image.tag`: worker image tag. Default: `1.0`
 - `image.pullPolicy`: Kubernetes image pull policy. Default: `Always`
 - `worker.controlPlaneUrl`: MergeLoom controller URL. Default: `https://controller.mergeloom.ai`
-- `worker.tenantSlug`: customer workspace slug (required)
-- `worker.enrollmentToken`: worker enrollment token from the MergeLoom controller (required unless `secret.existingSecretName` is set)
-- `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used
+- `worker.tenantSlug`: customer workspace slug from the MergeLoom controller. Required. The chart default is `"demo"` as a placeholder — always set this to your real slug.
+- `worker.enrollmentToken`: worker enrollment token from the MergeLoom controller. Required unless `secret.existingSecretName` is set.
+- `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used.
 
 ### Worker Runtime Controls
 
@@ -115,15 +168,15 @@ helm template mergeloom-worker . \
 
 ### Deployment Configuration
 
-- `gateway.replicaCount`: gateway replica count. Keep at `1`
-- `executors.replicaCount`: executor pod count for job claim and execution. Scales job capacity
-- `service.type`: internal gateway service type. Default: `ClusterIP` (recommended)
-- `service.port`: internal gateway service port. Default: `8010`
+- `gateway.replicaCount`: gateway replica count. Keep at `1`.
+- `executors.replicaCount`: executor pod count for job claim and execution. Scales job capacity. The executor workload is a `StatefulSet`; each replica gets its own workspace `PersistentVolumeClaim` when `persistence.workspaces.enabled=true`.
+- `service.type`: internal gateway service type. Default: `ClusterIP` (recommended).
+- `service.port`: internal gateway service port. Default: `8010`.
 
 ### Cloud Identity and Service Accounts
 
 - `serviceAccount.create`: create a service account for gateway and executor pods. Default: `false`
-- `serviceAccount.name`: existing service account name or the created service account name
+- `serviceAccount.name`: existing service account name to use, or the name of the created service account
 - `serviceAccount.annotations`: service account annotations for cloud identity integrations (GKE Workload Identity, EKS IRSA, AKS Workload Identity, etc.)
 - `serviceAccount.automountServiceAccountToken`: enable pod service account token projection. Default: `true`
 - `podLabels`: extra labels on gateway and executor pod templates. AKS Workload Identity requires `azure.workload.identity/use: "true"`
@@ -136,18 +189,18 @@ helm template mergeloom-worker . \
 
 ### Persistence
 
-- `persistence.gateway.enabled`: enable persistent storage for gateway state (worker UI state, provider config, runtime config). Default: `true`. Recommended for production
+- `persistence.gateway.enabled`: enable persistent storage for gateway state (worker UI state, provider config, runtime config). Default: `true`. Recommended for production.
 - `persistence.gateway.accessMode`: PVC access mode. Default: `ReadWriteOnce`
 - `persistence.gateway.size`: requested gateway PVC storage. Default: `5Gi`
-- `persistence.gateway.storageClassName`: StorageClass name. Leave blank for cluster default
-- `persistence.workspaces.enabled`: enable persistent storage for job workspaces (cloned repositories). Default: `true`. Recommended for production
+- `persistence.gateway.storageClassName`: StorageClass name. Leave blank for cluster default.
+- `persistence.workspaces.enabled`: enable persistent storage for job workspaces (cloned repositories). Default: `true`. Recommended for production. When enabled, a PVC is created per executor replica via the StatefulSet `volumeClaimTemplates`.
 - `persistence.workspaces.accessMode`: PVC access mode. Default: `ReadWriteOnce`
 - `persistence.workspaces.size`: requested storage per executor replica. Default: `10Gi`
-- `persistence.workspaces.storageClassName`: StorageClass name. Leave blank for cluster default
-- `persistence.cliConfig.enabled`: enable persistent storage for CLI auth/config state. Default: `true`. Recommended when using CLI auth
+- `persistence.workspaces.storageClassName`: StorageClass name. Leave blank for cluster default.
+- `persistence.cliConfig.enabled`: enable persistent storage for CLI auth/config state shared between the gateway and all executor pods. Default: `true`. Recommended when using Codex or Claude Code CLI auth.
 - `persistence.cliConfig.accessMode`: PVC access mode. Default: `ReadWriteOnce`
 - `persistence.cliConfig.size`: requested CLI config PVC storage. Default: `1Gi`
-- `persistence.cliConfig.storageClassName`: StorageClass name. Leave blank for cluster default
+- `persistence.cliConfig.storageClassName`: StorageClass name. Leave blank for cluster default.
 
 ### Pod Resource and Scheduling
 
@@ -160,6 +213,13 @@ helm template mergeloom-worker . \
 
 - `nameOverride`: override the short chart name used in Kubernetes object labels/names
 - `fullnameOverride`: override the full Kubernetes object name
+
+### Reserved Values
+
+The following top-level keys are present in `values.yaml` for forward compatibility. They are not required for current installs; the gateway and executors manage provider and runtime configuration through the gateway UI automatically.
+
+- `providerConfig.mode`, `providerConfig.provenance`, `providerConfig.dbPath`, `providerConfig.secretKeyPath`: reserved provider configuration fields.
+- `runtimeConfig.mode`, `runtimeConfig.provenance`, `runtimeConfig.dbPath`: reserved runtime configuration fields.
 
 ## Related Links
 
