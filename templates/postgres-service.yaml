@@ -1,0 +1,19 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jca-worker.postgresName" . }}
+  labels:
+    {{- include "jca-worker.labels" . | nindent 4 }}
+    component: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    component: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+{{- end }}

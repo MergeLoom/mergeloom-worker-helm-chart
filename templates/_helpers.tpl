@@ -56,3 +56,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
 {{- define "jca-worker.executorName" -}}
 {{- printf "%s-executor" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "jca-worker.postgresName" -}}
+{{- printf "%s-postgres" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "jca-worker.databaseUrl" -}}
+{{- if .Values.worker.databaseUrl -}}
+{{- .Values.worker.databaseUrl -}}
+{{- else if .Values.postgres.enabled -}}
+{{- printf "postgresql+psycopg://%s:%s@%s:5432/%s" (.Values.postgres.username | urlquery) (.Values.postgres.password | urlquery) (include "jca-worker.postgresName" .) (.Values.postgres.database | urlquery) -}}
+{{- else -}}
+{{- "" -}}
+{{- end -}}
+{{- end -}}

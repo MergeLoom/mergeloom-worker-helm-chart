@@ -31,6 +31,26 @@ spec:
       serviceAccountName: {{ include "jca-worker.serviceAccountName" . }}
       {{- end }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- if .Values.postgres.enabled }}
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import socket, time
+              host = "{{ include "jca-worker.postgresName" . }}"
+              deadline = time.time() + 180
+              while time.time() < deadline:
+                  try:
+                      with socket.create_connection((host, 5432), timeout=3):
+                          raise SystemExit(0)
+                  except OSError:
+                      time.sleep(2)
+              raise SystemExit("Postgres did not become reachable")
+      {{- end }}
       containers:
         - name: worker-executor
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -52,8 +72,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: JCA_WORKER_LOCAL_STATE_DB
-              value: "/data/worker/worker_state.db"
             - name: JCA_WORKER_WORKSPACE_ROOT
               value: "/data/workspaces"
             - name: JCA_WORKER_CLI_CONFIG_DIR
@@ -165,7 +183,9 @@ spec:
     - metadata:
         name: worker-data
         labels:
-          {{- include "jca-worker.labels" . | nindent 10 }}
+          app.kubernetes.io/name: {{ include "jca-worker.name" . | quote }}
+          app.kubernetes.io/instance: {{ .Release.Name | quote }}
+          component: executor
       spec:
         accessModes:
           - {{ .Values.persistence.workspaces.accessMode }}

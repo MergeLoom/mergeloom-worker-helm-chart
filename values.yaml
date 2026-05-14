@@ -67,6 +67,18 @@ worker:
   clusterToken: ""
   # Optional. Comma-separated allowlist of shell commands the worker may execute during jobs.
   allowedCommands: "git,rg,pytest,python,python3"
+  # Optional. Shared database URL for all worker stores. Leave blank to use the chart-managed Postgres service.
+  # To use RDS, Cloud SQL, Azure Database for PostgreSQL, or another managed Postgres service,
+  # set this and set postgres.enabled=false. If secret.existingSecretName is set, put
+  # JCA_WORKER_DATABASE_URL in that Secret instead.
+  databaseUrl: ""
+  # Optional. Advanced per-store database URLs. Leave blank to use worker.databaseUrl.
+  configDatabaseUrl: ""
+  auditDatabaseUrl: ""
+  codeAuditDatabaseUrl: ""
+  liveDatabaseUrl: ""
+  traceDatabaseUrl: ""
+  gatewayDatabaseUrl: ""
   # Optional. Number of executor repair attempts before a job is marked failed.
   maxRepairAttempts: 2
   # Optional. Per-command timeout in seconds.
@@ -106,11 +118,34 @@ secret:
   # Recommended for production so sensitive values do not live in values.yaml or Helm release metadata.
   # If using an existing Secret, include JCA_WORKER_CLUSTER_TOKEN or generate one before install.
   # When set, this chart will not create its own Secret. The Secret should contain these keys as needed:
-  # JCA_WORKER_ENROLLMENT_TOKEN, JCA_WORKER_CLUSTER_TOKEN, JCA_OPENAI_API_KEY,
+  # JCA_WORKER_ENROLLMENT_TOKEN, JCA_WORKER_CLUSTER_TOKEN, JCA_WORKER_DATABASE_URL,
+  # JCA_WORKER_CONFIG_DB_URL, JCA_WORKER_AUDIT_DB_URL, JCA_WORKER_CODE_AUDIT_DB_URL,
+  # JCA_WORKER_LIVE_DB_URL, JCA_WORKER_TRACE_DB_URL, JCA_WORKER_GATEWAY_DB_URL,
+  # JCA_OPENAI_API_KEY,
   # JCA_ANTHROPIC_API_KEY, JCA_VERTEX_SERVICE_ACCOUNT_JSON, JCA_VERTEX_ACCESS_TOKEN,
   # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN,
   # JCA_AZURE_FOUNDRY_API_KEY, AZURE_CLIENT_SECRET, JCA_AZURE_FOUNDRY_BEARER_TOKEN.
   existingSecretName: ""
+
+# Worker Postgres settings. Enabled by default because self-hosted workers are production deployments.
+# Disable only when worker.databaseUrl or secret.existingSecretName points at an external Postgres database.
+postgres:
+  # Optional. Deploy a dedicated Postgres database for this worker installation.
+  enabled: true
+  # Optional. Postgres image used by the chart-managed database.
+  image: "postgres:16-alpine"
+  # Optional. Database name.
+  database: "mergeloom_worker"
+  # Optional. Database username.
+  username: "mergeloom_worker"
+  # Required for production. Override this with a generated secret value.
+  password: "change-me"
+  # Optional. Persistent volume size.
+  storage: "10Gi"
+  # Optional. StorageClass name. Leave blank to use the cluster default.
+  storageClassName: ""
+  # Optional. Resource requests/limits for Postgres.
+  resources: {}
 
 # Optional AI provider credentials and model defaults.
 # Leave unused providers blank. Sensitive values here are a quick-start fallback only.

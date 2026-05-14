@@ -20,7 +20,7 @@ Set the customer-specific values from the controller before installing:
 
 ```bash
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.3 \
+  --version 1.0.4 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set worker.enrollmentToken="worker-enrollment-token"
@@ -30,16 +30,19 @@ Open the MergeLoom web app at [mergeloom.ai](https://mergeloom.ai) to create a w
 
 When the chart creates its own Secret, it generates `JCA_WORKER_CLUSTER_TOKEN` automatically if `worker.clusterToken` is blank. The token is reused on upgrades and is only used for internal gateway/executor authentication inside the worker install. You do not need to copy it from the controller.
 
+By default the chart deploys a dedicated Postgres database for the self-hosted worker and writes `JCA_WORKER_DATABASE_URL` for the gateway and executors. Override `postgres.password` with a generated production secret. To use RDS, Cloud SQL, Azure Database for PostgreSQL, or another managed Postgres service, set `postgres.enabled=false` and provide `worker.databaseUrl`. If you use `secret.existingSecretName`, put `JCA_WORKER_DATABASE_URL` in that Secret instead.
+
 For production installs, manage sensitive values with a Kubernetes Secret instead of putting them in Helm values:
 
 ```bash
 kubectl create secret generic mergeloom-worker-env \
   --from-literal=JCA_WORKER_ENROLLMENT_TOKEN="worker-enrollment-token" \
   --from-literal=JCA_WORKER_CLUSTER_TOKEN="$(openssl rand -hex 48)" \
+  --from-literal=JCA_WORKER_DATABASE_URL="postgresql+psycopg://user:password@postgres-host:5432/mergeloom_worker" \
   --from-literal=JCA_OPENAI_API_KEY="openai-api-key"
 
 helm install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.3 \
+  --version 1.0.4 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set secret.existingSecretName="mergeloom-worker-env"
@@ -49,6 +52,13 @@ The chart consumes the existing Secret with `envFrom`. Add only the keys your wo
 
 - `JCA_WORKER_ENROLLMENT_TOKEN`
 - `JCA_WORKER_CLUSTER_TOKEN`
+- `JCA_WORKER_DATABASE_URL`
+- `JCA_WORKER_CONFIG_DB_URL`
+- `JCA_WORKER_AUDIT_DB_URL`
+- `JCA_WORKER_CODE_AUDIT_DB_URL`
+- `JCA_WORKER_LIVE_DB_URL`
+- `JCA_WORKER_TRACE_DB_URL`
+- `JCA_WORKER_GATEWAY_DB_URL`
 - `JCA_OPENAI_API_KEY`
 - `JCA_ANTHROPIC_API_KEY`
 - `JCA_VERTEX_SERVICE_ACCOUNT_JSON`
@@ -70,7 +80,7 @@ Example GKE Workload Identity-style install:
 
 ```bash
 helm upgrade --install mergeloom-worker oci://registry-1.docker.io/mergeloom/mergeloom-worker \
-  --version 1.0.3 \
+  --version 1.0.4 \
   --set worker.controlPlaneUrl="https://controller.mergeloom.ai" \
   --set worker.tenantSlug="customer-slug" \
   --set secret.existingSecretName="mergeloom-worker-env" \
@@ -103,6 +113,10 @@ Important values:
 - `worker.tenantSlug`: customer workspace slug.
 - `worker.enrollmentToken`: worker enrollment token from the controller. For production, prefer `secret.existingSecretName`.
 - `worker.clusterToken`: optional internal gateway/executor token. Auto-generated when blank unless `secret.existingSecretName` is used.
+- `worker.databaseUrl`: optional external Postgres URL. Leave blank to use chart-managed Postgres.
+- `worker.*DatabaseUrl`: optional advanced per-store Postgres URLs. Leave blank to use `worker.databaseUrl`.
+- `postgres.enabled`: deploy chart-managed worker Postgres. Default: `true`.
+- `postgres.password`: chart-managed Postgres password. Override for production.
 - `secret.existingSecretName`: existing Kubernetes Secret consumed by the worker pods for sensitive env vars.
 - `serviceAccount.*`: Kubernetes service account creation, name, and cloud identity annotations.
 - `podLabels` / `podAnnotations`: extra pod metadata for identity integrations such as AKS Workload Identity.
