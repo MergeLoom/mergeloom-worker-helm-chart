@@ -1,0 +1,144 @@
+{{- if .Values.contextEngine.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jca-worker.contextEngineName" . }}
+  labels:
+    {{- include "jca-worker.labels" . | nindent 4 }}
+    component: context-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      component: context-engine
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        component: context-engine
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+      serviceAccountName: {{ include "jca-worker.serviceAccountName" . }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- if .Values.postgres.enabled }}
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ default .Values.image.repository .Values.contextEngine.image.repository }}:{{ default .Values.image.tag .Values.contextEngine.image.tag }}"
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.contextEngine.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import socket, time
+              host = "{{ include "jca-worker.postgresName" . }}"
+              deadline = time.time() + 180
+              while time.time() < deadline:
+                  try:
+                      with socket.create_connection((host, 5432), timeout=3):
+                          raise SystemExit(0)
+                  except OSError:
+                      time.sleep(2)
+              raise SystemExit("Postgres did not become reachable")
+      {{- end }}
+      containers:
+        - name: context-engine
+          image: "{{ default .Values.image.repository .Values.contextEngine.image.repository }}:{{ default .Values.image.tag .Values.contextEngine.image.tag }}"
+          imagePullPolicy: {{ default .Values.image.pullPolicy .Values.contextEngine.image.pullPolicy }}
+          command:
+            - uvicorn
+            - jira_code_agent.context_engine.app:create_context_engine_app
+            - --factory
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8020"
+          ports:
+            - name: http
+              containerPort: 8020
+              protocol: TCP
+          env:
+            - name: JCA_CONTEXT_ENGINE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jca-worker.contextEngineSecretName" . }}
+                  key: database-url
+            - name: JCA_CONTEXT_ENGINE_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jca-worker.contextEngineSecretName" . }}
+                  key: internal-token
+            - name: JCA_CONTEXT_ENGINE_WORKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jca-worker.contextEngineSecretName" . }}
+                  key: worker-token
+            - name: JCA_CONTEXT_ENGINE_VAULT_ROOT
+              value: "/data/context-vault"
+            - name: JCA_CONTEXT_ENGINE_REPOSITORY_CACHE_ROOT
+              value: "/data/repository-cache"
+            - name: JCA_CONTEXT_ENGINE_ALLOWED_TENANT_ID
+              value: {{ .Values.worker.tenantSlug | quote }}
+            - name: JCA_CONTEXT_ENGINE_ALLOWED_WORKSPACE_ID
+              value: {{ .Values.worker.tenantSlug | quote }}
+            - name: JCA_CONTEXT_ENGINE_REQUEST_TIMEOUT_SECONDS
+              value: {{ .Values.contextEngine.requestTimeoutSeconds | quote }}
+            - name: JCA_CONTEXT_ENGINE_EMBEDDING_PROVIDER
+              value: {{ .Values.contextEngine.embeddingProvider | quote }}
+            - name: JCA_CONTEXT_ENGINE_EMBEDDING_MODEL
+              value: {{ .Values.contextEngine.embeddingModel | quote }}
+            - name: JCA_CONTEXT_ENGINE_EMBEDDING_INDEX_TOKEN_LIMIT
+              value: {{ .Values.contextEngine.embeddingIndexTokenLimit | quote }}
+            - name: JCA_CONTEXT_ENGINE_EMBEDDING_QUERY_TOKEN_LIMIT
+              value: {{ .Values.contextEngine.embeddingQueryTokenLimit | quote }}
+            - name: JCA_CONTEXT_ENGINE_EMBEDDING_REQUEST_TIMEOUT_SECONDS
+              value: {{ .Values.contextEngine.embeddingRequestTimeoutSeconds | quote }}
+            - name: JCA_CONTEXT_ENGINE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jca-worker.contextEngineSecretName" . }}
+                  key: openai-api-key
+            - name: JCA_CONTEXT_ENGINE_OPENAI_API_KEY_FILE
+              value: {{ .Values.contextEngine.openaiApiKeyFile | quote }}
+          volumeMounts:
+            - name: context-engine-vault
+              mountPath: /data/context-vault
+            - name: context-engine-repository-cache
+              mountPath: /data/repository-cache
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            {{- toYaml .Values.contextEngine.resources | nindent 12 }}
+      volumes:
+        - name: context-engine-vault
+          {{- if .Values.persistence.contextEngineVault.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "jca-worker.contextEngineName" . }}-vault
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: context-engine-repository-cache
+          emptyDir: {}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+{{- end }}

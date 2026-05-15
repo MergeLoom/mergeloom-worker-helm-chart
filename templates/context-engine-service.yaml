@@ -1,0 +1,19 @@
+{{- if .Values.contextEngine.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jca-worker.contextEngineName" . }}
+  labels:
+    {{- include "jca-worker.labels" . | nindent 4 }}
+    component: context-engine
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "jca-worker.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    component: context-engine
+  ports:
+    - name: http
+      port: 8020
+      targetPort: http
+{{- end }}

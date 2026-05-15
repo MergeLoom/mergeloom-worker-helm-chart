@@ -61,6 +61,14 @@ app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
 {{- printf "%s-postgres" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "jca-worker.contextEngineName" -}}
+{{- printf "%s-context-engine" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "jca-worker.contextEngineSecretName" -}}
+{{- printf "%s-context-engine" (include "jca-worker.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{- define "jca-worker.databaseUrl" -}}
 {{- if .Values.worker.databaseUrl -}}
 {{- .Values.worker.databaseUrl -}}
@@ -68,5 +76,33 @@ app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
 {{- printf "postgresql+psycopg://%s:%s@%s:5432/%s" (.Values.postgres.username | urlquery) (.Values.postgres.password | urlquery) (include "jca-worker.postgresName" .) (.Values.postgres.database | urlquery) -}}
 {{- else -}}
 {{- "" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "jca-worker.contextEngineDatabaseUrl" -}}
+{{- if .Values.contextEngine.databaseUrl -}}
+{{- .Values.contextEngine.databaseUrl -}}
+{{- else -}}
+{{- include "jca-worker.databaseUrl" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "jca-worker.contextEngineInternalToken" -}}
+{{- $secretName := include "jca-worker.contextEngineSecretName" . -}}
+{{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName -}}
+{{- if and $existingSecret $existingSecret.data (index $existingSecret.data "internal-token") -}}
+{{- index $existingSecret.data "internal-token" | b64dec -}}
+{{- else -}}
+{{- randAlphaNum 64 -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "jca-worker.contextEngineWorkerToken" -}}
+{{- $secretName := include "jca-worker.contextEngineSecretName" . -}}
+{{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName -}}
+{{- if and $existingSecret $existingSecret.data (index $existingSecret.data "worker-token") -}}
+{{- index $existingSecret.data "worker-token" | b64dec -}}
+{{- else -}}
+{{- randAlphaNum 64 -}}
 {{- end -}}
 {{- end -}}

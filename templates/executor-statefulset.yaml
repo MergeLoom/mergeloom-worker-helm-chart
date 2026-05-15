@@ -94,6 +94,17 @@ spec:
               value: "0.0.0.0"
             - name: JCA_WORKER_PORT
               value: "8010"
+            {{- if .Values.contextEngine.enabled }}
+            - name: JCA_CONTEXT_ENGINE_URL
+              value: "http://{{ include "jca-worker.contextEngineName" . }}:8020"
+            - name: JCA_CONTEXT_ENGINE_WORKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "jca-worker.contextEngineSecretName" . }}
+                  key: worker-token
+            - name: JCA_CONTEXT_ENGINE_REQUEST_TIMEOUT_SECONDS
+              value: {{ .Values.contextEngine.requestTimeoutSeconds | quote }}
+            {{- end }}
             - name: JCA_OPENAI_MODEL
               value: {{ .Values.providerEnv.openaiModel | quote }}
             - name: JCA_ANTHROPIC_MODEL

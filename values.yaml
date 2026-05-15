@@ -112,6 +112,32 @@ runtimeConfig:
   # Optional/reserved. Future SQLite path for runtime configuration state.
   dbPath: "/data/worker/runtime_config.db"
 
+# Context Engine runs beside the self-hosted worker. It builds a private vault
+# from repositories and serves token-efficient snippets to worker runs.
+contextEngine:
+  # Optional. Deploy Context Engine for this self-hosted worker installation.
+  enabled: true
+  # Optional. Override the Context Engine image. Defaults to the worker image.
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: ""
+  # Optional. Shared database URL. Leave blank to use worker.databaseUrl / chart Postgres.
+  databaseUrl: ""
+  # Optional. Request timeout for Context Engine API calls.
+  requestTimeoutSeconds: 30
+  # Optional. Embedding provider. local_hashing is free/local; OpenAI is opt-in.
+  embeddingProvider: "local_hashing"
+  embeddingModel: "text-embedding-3-small"
+  embeddingIndexTokenLimit: 0
+  embeddingQueryTokenLimit: 0
+  embeddingRequestTimeoutSeconds: 30
+  # Optional. OpenAI embeddings key. Prefer secret.existingSecretName for production.
+  openaiApiKey: ""
+  openaiApiKeyFile: ""
+  # Optional. Resource requests/limits for the Context Engine pod.
+  resources: {}
+
 # Sensitive environment secret settings.
 secret:
   # Optional. Name of an existing Kubernetes Secret to consume with envFrom.
@@ -247,6 +273,16 @@ persistence:
     accessMode: ReadWriteOnce
     # Optional. Requested CLI config PVC storage size.
     size: 1Gi
+    # Optional. StorageClass name. Leave blank to use the cluster default.
+    storageClassName: ""
+  # Context Engine vault volume. Stores generated markdown vault documents.
+  contextEngineVault:
+    # Optional. Enable persistent storage for the Context Engine vault.
+    enabled: true
+    # Optional. Kubernetes PVC access mode when vault persistence is enabled.
+    accessMode: ReadWriteOnce
+    # Optional. Requested vault PVC storage size.
+    size: 5Gi
     # Optional. StorageClass name. Leave blank to use the cluster default.
     storageClassName: ""
 
