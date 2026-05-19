@@ -1,0 +1,7 @@
+providerEnv:
+  vertexAuthMethod: json
+  vertexProjectId: your-vertex-project-id
+  vertexLocation: your-vertex-location
+  vertexModel: your-vertex-model-name
+secret:
+  existingSecretName: mergeloom-vertex-ai-credentials
