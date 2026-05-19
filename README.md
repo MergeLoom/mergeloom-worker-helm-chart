@@ -93,6 +93,24 @@ helm upgrade --install mergeloom-worker oci://registry-1.docker.io/mergeloom/mer
   --set providerEnv.vertexModel="gemini-2.5-pro"
 ```
 
+## Validation
+
+After deploying the MergeLoom worker with Vertex AI configurations, it's crucial to validate that the integration is working as expected.
+
+### Vertex AI Configuration Validation
+
+To ensure your Vertex AI setup is correct:
+
+1.  **Check Worker Pod Logs:** Monitor the logs of your deployed MergeLoom worker pods for any errors related to Vertex AI connectivity, authentication, or model loading. Look for messages containing "Vertex AI", "GCP", or "authentication" keywords.
+    ```bash
+    kubectl logs -f <your-mergeloom-worker-pod-name> -c <your-container-name>
+    ```
+    (Replace `<your-mergeloom-worker-pod-name>` and `<your-container-name>` with actual values, usually found via `kubectl get pods` and `kubectl describe pod`.)
+
+2.  **Run a Test Job:** If your MergeLoom control plane supports it, trigger a minimal job that is configured to use Vertex AI for its operations (e.g., a simple code generation or summarization task). Observe if the job completes successfully and if there are any Vertex AI-related errors in the job's execution logs or the worker logs.
+
+This manual validation helps confirm that the `vertexProjectId`, `vertexLocation`, `vertexAuthMethod`, and other related settings are correctly configured and allow the worker to interact with Vertex AI.
+
 For local testing from this repository:
 
 ```bash
