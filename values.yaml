@@ -188,19 +188,19 @@ providerEnv:
   # Optional. Default Claude Code model.
   claudeCodeModel: ""
   # Optional. Vertex AI auth method: service_account_json, adc, or access_token.
-  vertexAuthMethod: ""
+  vertexAuthMethod: "adc"
   # Optional. Vertex AI endpoint mode: structured or raw-endpoint.
   vertexEndpointMode: ""
   # Optional. Vertex AI raw endpoint URL. Used only when vertexEndpointMode is raw-endpoint.
   vertexEndpointUrl: ""
   # Optional. Vertex AI project ID for structured publisher model paths.
-  vertexProjectId: ""
+  vertexProjectId: "mergeloom-e2e-project"
   # Optional. Vertex AI location for structured publisher model paths.
-  vertexLocation: ""
+  vertexLocation: "us-central1"
   # Optional. Vertex AI publisher for structured publisher model paths. Defaults to google in the worker.
   vertexPublisher: ""
   # Optional. Default Vertex AI model for structured publisher model paths.
-  vertexModel: ""
+  vertexModel: "gemini-pro"
   # Optional. ADC credential file path. Leave blank for GKE Workload Identity or metadata credentials.
   vertexCredentialsPath: ""
   # Optional, sensitive. Vertex AI service account JSON. Prefer secret.existingSecretName for production.
